@@ -84,10 +84,10 @@ def train(iterations, batch_size, sample_interval):
 
         if (iteration+1) % sample_interval == 0:
             losses.append((d_loss, g_loss))
-            accuracies.append(1000.0 * accuracy)
+            accuracies.append(100.0 * accuracy)
             iteration_checkpoints.append(iteration + 1)
 
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (iteration + 1, d_loss, accuracy, g_loss))
+            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (iteration + 1, d_loss, 100.0 * accuracy, g_loss))
 
             sample_images(generator)
 
