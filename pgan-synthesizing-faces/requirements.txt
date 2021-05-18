@@ -1,0 +1,5 @@
+tensorflow==2.4.0
+matplotlib
+pydot # requires graphviz
+mtcnn
+scikit-image
