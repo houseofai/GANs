@@ -45,9 +45,11 @@ def add_discriminator_block(old_model, n_input_layers=3):
     d = layers.Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(d)
     d = layers.BatchNormalization()(d)
     d = layers.LeakyReLU(alpha=0.2)(d)
+
     d = layers.Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(d)
     d = layers.BatchNormalization()(d)
     d = layers.LeakyReLU(alpha=0.2)(d)
+
     d = layers.AveragePooling2D()(d)
     block_new = d
 
@@ -81,7 +83,7 @@ def add_discriminator_block(old_model, n_input_layers=3):
 
 
 # define the discriminator models for each image resolution
-def build_discriminator(input_shape=(4, 4, 3)):
+def build_discriminator(input_shape=(8, 8, 3)):
     print('Building the Discriminator')
     print("\t* input shape: {}".format(input_shape))
 
@@ -114,7 +116,7 @@ def build_discriminator(input_shape=(4, 4, 3)):
     return model
 
 
-def discriminators(n_blocks, input_shape=(4, 4, 3)):
+def discriminators(n_blocks, input_shape=(8, 8, 3)):
     model = build_discriminator(input_shape)
 
     # store model
@@ -139,8 +141,15 @@ def discriminators(n_blocks, input_shape=(4, 4, 3)):
 # add a generator block
 def add_generator_block(old_model):
     print("Creating a new generator with improved shape")
+
+    input_shape = (old_model.input.shape[-2] * 2, old_model.input.shape[-2] * 2, old_model.input.shape[-1])
+
     # get the end of the last block
     block_end = old_model.layers[-2].output
+
+
+
+
 
     # upsample, and define new block
     upsampling = layers.UpSampling2D()(block_end)
@@ -153,6 +162,7 @@ def add_generator_block(old_model):
     g = layers.LeakyReLU(alpha=0.2)(g)
     # add new output layer
     out_image = layers.Conv2D(3, (1, 1), padding='same', kernel_initializer='he_normal')(g)
+
     # define model
     model1 = keras.models.Model(old_model.input, out_image)
     # get the output layer from old model
@@ -167,14 +177,24 @@ def add_generator_block(old_model):
 
 
 # define generator models
-def build_generator(latent_dim, in_dim=4):
+def build_generator(input_shape=(4, 4, 3)):
     print('Building the Generator')
+    print("\t* input shape: {}".format(input_shape))
+
+    pix = input_shape[0]
+    in_dim = pix * 2
+    dense_unit = 128 * pix * pix
+    total_pix = dense_unit * pix * pix
+    reshape_unit = int(total_pix / in_dim / in_dim)
+
+    # base model input
+    input = keras.Input(shape=input_shape)
     # base model latent input
-    in_latent = keras.Input(shape=(latent_dim,))
+    # in_latent = keras.Input(shape=(latent_dim,))
 
     # linear scale up to activation maps
-    g = layers.Dense(128 * in_dim * in_dim, kernel_initializer='he_normal')(in_latent)
-    g = layers.Reshape((in_dim, in_dim, 128))(g)
+    g = layers.Dense(dense_unit, kernel_initializer='he_normal')(input)
+    g = layers.Reshape((in_dim, in_dim, reshape_unit))(g)
 
     # conv 4x4, input block
     g = layers.Conv2D(128, (3, 3), padding='same', kernel_initializer='he_normal')(g)
@@ -190,11 +210,11 @@ def build_generator(latent_dim, in_dim=4):
     out_image = layers.Conv2D(3, (1, 1), padding='same', kernel_initializer='he_normal')(g)
 
     # define model
-    return keras.models.Model(in_latent, out_image)
+    return keras.models.Model(input, out_image)
 
 
-def generators(latent_dim, n_blocks, in_dim=4):
-    model = build_generator(latent_dim, in_dim)
+def generators(n_blocks, input_shape=(4, 4, 3)):
+    model = build_generator(input_shape)
 
     # store model
     model_list = list()

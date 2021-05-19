@@ -29,13 +29,13 @@ def generator_loss(fake_output):
 
 
 # @tf.function
-def train_step(discriminator, generator, images, batch_size, latent_dim):
-    noise = tf.random.normal([batch_size, latent_dim])
+def train_step(discriminator, generator, images, images_double_size):
+    #noise = tf.random.normal([batch_size, latent_dim])
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-        generated_images = generator(noise, training=True)
+        generated_images = generator(images, training=True)
 
-        real_output = discriminator(images, training=True)
+        real_output = discriminator(images_double_size, training=True)
         fake_output = discriminator(generated_images, training=True)
 
         gen_loss = generator_loss(fake_output)
@@ -51,13 +51,13 @@ def train_step(discriminator, generator, images, batch_size, latent_dim):
 
 
 # generate samples and save as a plot and save the model
-def generate(generator, latent_dim, n_samples=16, clear=True):
+def generate(generator, imgs, n_samples=16, clear=True):
     if clear:
         display.clear_output(wait=True)
 
     # generate images
-    z = np.random.normal(0, 1, (n_samples, latent_dim))
-    X = generator.predict(z)
+    #z = np.random.normal(0, 1, (n_samples, latent_dim))
+    X = generator.predict(imgs)
 
     X = (X - X.min()) / (X.max() - X.min())
     # plot real images
@@ -77,3 +77,16 @@ def update_fadein(models, epoch, epochs):
         for layer in model.layers:
             if isinstance(layer, gan.WeightedSum):
                 backend.set_value(layer.alpha, alpha)
+
+
+def get_datasets(dataset, shape, batch_size, buffer_size, scale=2):
+    ds = prepare_ds(dataset, shape, batch_size, buffer_size)
+    ds_2 = prepare_ds(dataset, tuple([x*scale for x in shape]), batch_size, buffer_size)
+    return ds, ds_2
+
+
+def prepare_ds(dataset, shape, batch_size, buffer_size):
+    print(f"Creating a dataset with shape {shape}, batch size of {batch_size} and buffer size {buffer_size}")
+    train_images = tf.image.resize(dataset, shape, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR).numpy()
+    train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
+    return tf.data.Dataset.from_tensor_slices(train_images).shuffle(buffer_size).batch(batch_size)
